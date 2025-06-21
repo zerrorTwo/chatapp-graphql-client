@@ -1,37 +1,24 @@
-'use client'
+'use client';
 
-import Link from 'next/link'
-import { z } from 'zod'
-import { zodResolver } from '@hookform/resolvers/zod'
-import { useForm } from 'react-hook-form'
-import { toast } from 'sonner'
-
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from '@/components/ui/form'
-import { Button } from '@/components/ui/button'
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card'
-import { Input } from '@/components/ui/input'
+import Link from 'next/link';
+import { z } from 'zod';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { useForm } from 'react-hook-form';
+import { toast } from 'sonner'; // Assuming 'sonner' is your toast library
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { signIn } from 'next-auth/react';
 
 // Improved schema with additional validation rules
 const formSchema = z.object({
   email: z.string().email({ message: 'Invalid email address' }),
   password: z
     .string()
-    .min(6, { message: 'Password must be at least 6 characters long' })
+    .min(8, { message: 'Password must be at least 8 characters long' })
     .regex(/[a-zA-Z0-9]/, { message: 'Password must be alphanumeric' }),
-})
+});
 
 export default function LoginPreview() {
   const form = useForm<z.infer<typeof formSchema>>({
@@ -40,20 +27,43 @@ export default function LoginPreview() {
       email: '',
       password: '',
     },
-  })
+  });
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     try {
-      // Assuming an async login function
-      console.log(values)
-      toast(
-        <pre className="mt-2 w-[340px] rounded-md bg-slate-950 p-4">
-          <code className="text-white">{JSON.stringify(values, null, 2)}</code>
-        </pre>,
-      )
+      const { email, password } = values;
+      const res = await signIn('credentials', {
+        email,
+        password,
+        callbackUrl: '/', // URL to redirect to on successful login
+        redirect: false,  // Crucial: prevents automatic redirect, allows custom error handling
+      });
+
+      console.log('signIn response:', res); // Log the full response for debugging
+
+      if (res?.error) {
+        if (res.error === 'CredentialsSignin') {
+          // Auth.js returns 'CredentialsSignin' when authorize callback returns null.
+          // This typically covers incorrect email/password.
+          toast.error('Invalid email or password!'); // Default message for CredentialsSignin
+          return { error: 'Invalid email or password!' };
+        } else {
+          // Handle other potential errors returned by signIn
+          toast.error(`Login failed: ${res.error}`);
+          return { error: res.error || 'Something went wrong during login!' };
+        }
+      }
+
+      // If no error property, login was successful
+      toast.success('Login successful!');
+      window.location.href = '/'; // Manual redirect after successful login
+      return { success: true };
+
     } catch (error) {
-      console.error('Form submission error', error)
-      toast.error('Failed to submit the form. Please try again.')
+      // This catch block handles unexpected errors during the signIn call itself
+      console.error('Unexpected error during form submission:', error);
+      toast.error('Failed to submit the form. Please try again.');
+      return { error: 'Failed to submit the form. Please try again.' };
     }
   }
 
@@ -63,7 +73,7 @@ export default function LoginPreview() {
         <CardHeader>
           <CardTitle className="text-2xl">Login</CardTitle>
           <CardDescription>
-            Enter your email and password to login to your account.
+            Enter your email and password to log in to your account.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -123,8 +133,7 @@ export default function LoginPreview() {
                   Login
                 </Button>
 
-
-                <Button variant="outline" className="w-full flex items-center gap-2 cursor-pointer" >
+                <Button variant="outline" className="w-full flex items-center gap-2 cursor-pointer">
                   <img
                     src="/images/google.png"
                     alt="Google icon"
@@ -132,7 +141,6 @@ export default function LoginPreview() {
                   />
                   <span className="text-sm font-medium">Login with Google</span>
                 </Button>
-
               </div>
             </form>
           </Form>
@@ -145,5 +153,5 @@ export default function LoginPreview() {
         </CardContent>
       </Card>
     </div>
-  )
+  );
 }
