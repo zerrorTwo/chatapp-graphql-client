@@ -4,6 +4,8 @@ import './globals.css';
 import { Toaster } from 'sonner';
 import { ReactNode } from 'react';
 import { SessionProvider } from 'next-auth/react';
+import { LoadingProvider } from '@/app/context/loadingContext';
+import GlobalLoading from '@/app/components/globalLoading';
 
 const geistSans = Geist({
   variable: '--font-geist-sans',
@@ -30,10 +32,14 @@ export default function RootLayout({
     <body
       className={`${geistSans.variable} ${geistMono.variable} antialiased`}
     >
-    <SessionProvider>
-      {children}
-      <Toaster richColors />
-    </SessionProvider>
+    <LoadingProvider>
+      <SessionProvider>
+        <GlobalLoading />
+        {children}
+        <Toaster richColors />
+      </SessionProvider>
+    </LoadingProvider>
+
     </body>
     </html>
   );

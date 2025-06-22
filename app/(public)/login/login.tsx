@@ -4,14 +4,14 @@ import Link from 'next/link';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
-import { toast } from 'sonner'; // Assuming 'sonner' is your toast library
+import { toast } from 'sonner';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { signIn } from 'next-auth/react';
+import { useLoading } from '@/app/context/loadingContext';
 
-// Improved schema with additional validation rules
 const formSchema = z.object({
   email: z.string().email({ message: 'Invalid email address' }),
   password: z
@@ -28,42 +28,55 @@ export default function LoginPreview() {
       password: '',
     },
   });
+  const { setLoading } = useLoading();
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     try {
+      setLoading(true);
       const { email, password } = values;
       const res = await signIn('credentials', {
         email,
         password,
-        callbackUrl: '/', // URL to redirect to on successful login
-        redirect: false,  // Crucial: prevents automatic redirect, allows custom error handling
+        callbackUrl: '/',
+        redirect: false,
       });
 
-      console.log('signIn response:', res); // Log the full response for debugging
-
       if (res?.error) {
+        setLoading(false);
         if (res.error === 'CredentialsSignin') {
-          // Auth.js returns 'CredentialsSignin' when authorize callback returns null.
-          // This typically covers incorrect email/password.
-          toast.error('Invalid email or password!'); // Default message for CredentialsSignin
+          toast.error('Invalid email or password!');
           return { error: 'Invalid email or password!' };
         } else {
-          // Handle other potential errors returned by signIn
           toast.error(`Login failed: ${res.error}`);
           return { error: res.error || 'Something went wrong during login!' };
         }
       }
-
-      // If no error property, login was successful
+      setLoading(false);
       toast.success('Login successful!');
-      window.location.href = '/'; // Manual redirect after successful login
+      window.location.href = '/';
       return { success: true };
-
     } catch (error) {
-      // This catch block handles unexpected errors during the signIn call itself
       console.error('Unexpected error during form submission:', error);
       toast.error('Failed to submit the form. Please try again.');
       return { error: 'Failed to submit the form. Please try again.' };
+    }
+  }
+
+  async function handleGoogleSignIn() {
+    try {
+      const res = await signIn('google', { callbackUrl: '/', redirect: false });
+      console.log('Google signIn response:', res);
+      if (res?.error) {
+        toast.error('Google login failed!');
+        return { error: 'Google login failed!' };
+      }
+      toast.success('Google login successful!');
+      window.location.href = res.url || '/';
+      return { success: true };
+    } catch (error) {
+      console.error('Unexpected error during Google login:', error);
+      toast.error('Google login failed. Please try again.');
+      return { error: 'Google login failed. Please try again.' };
     }
   }
 
@@ -115,7 +128,7 @@ export default function LoginPreview() {
                       </div>
                       <FormControl>
                         <Input
-                          type={'password'}
+                          type="password"
                           id="password"
                           placeholder="******"
                           autoComplete="current-password"
@@ -132,8 +145,12 @@ export default function LoginPreview() {
                 >
                   Login
                 </Button>
-
-                <Button variant="outline" className="w-full flex items-center gap-2 cursor-pointer">
+                <Button
+                  type="button"
+                  onClick={handleGoogleSignIn}
+                  variant="outline"
+                  className="w-full flex items-center gap-2 cursor-pointer"
+                >
                   <img
                     src="/images/google.png"
                     alt="Google icon"
@@ -145,7 +162,7 @@ export default function LoginPreview() {
             </form>
           </Form>
           <div className="mt-4 text-center text-sm">
-            Don&apos;t have an account?{' '}
+            Don't have an account?{' '}
             <Link href="/register" className="underline">
               Sign up
             </Link>

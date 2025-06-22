@@ -1,24 +1,17 @@
 import NextAuth from 'next-auth';
-import Credentials from 'next-auth/providers/credentials';
-import { LOGIN_MUTATION } from '@/app/graphql/mutations/login.mutation';
+import CredentialsProvider from 'next-auth/providers/credentials';
+import GoogleProvider from 'next-auth/providers/google';
+import { GOOGLE_LOGIN_MUTATION, LOGIN_MUTATION } from '@/app/graphql/mutations/login.mutation';
 import createApolloClient from '@/app/graphql/apollo-client';
 import { ApolloError } from '@apollo/client';
 import { CustomCredentialsError } from '@/app/utils/CustomCredentialsError';
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
   providers: [
-    Credentials({
+    CredentialsProvider({
       credentials: {
-        email: {
-          type: 'email',
-          label: 'Email',
-          placeholder: 'hoangthiennam@gmail.com',
-        },
-        password: {
-          type: 'password',
-          label: 'Password',
-          placeholder: '*****',
-        },
+        email: { type: 'email', label: 'Email', placeholder: 'hoangthiennam@gmail.com' },
+        password: { type: 'password', label: 'Password', placeholder: '*****' },
       },
       authorize: async (credentials) => {
         const { email, password } = credentials;
@@ -35,25 +28,34 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
             throw new CustomCredentialsError('Invalid credentials', 'invalid_credentials');
           }
 
-          const user = {
+          return {
             id: loginData.user.id,
             email: loginData.user.email,
             name: loginData.user.username,
             accessToken: loginData.accessToken,
           };
-
-          return user;
         } catch (error) {
           if (error instanceof ApolloError) {
             const gqlError = error.graphQLErrors?.[0];
             const actualMessage =
               gqlError?.extensions?.message || gqlError?.message || 'Unknown error';
-            console.log('GraphQL Error:', actualMessage); // Debug log
-            throw new CustomCredentialsError(String(actualMessage), 'graphql_error'); // Ném lỗi tùy chỉnh
+            console.log('GraphQL Error:', actualMessage);
+            throw new CustomCredentialsError(String(actualMessage), 'graphql_error');
           }
-          console.log('Non-GraphQL Error:', error); // Debug log
+          console.log('Non-GraphQL Error:', error);
           throw new CustomCredentialsError('Login failed', 'unknown_error');
         }
+      },
+    }),
+    GoogleProvider({
+      clientId: process.env.GOOGLE_CLIENT_ID,
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+      authorization: {
+        params: {
+          prompt: 'consent',
+          access_type: 'offline',
+          response_type: 'code',
+        },
       },
     }),
   ],
@@ -61,13 +63,46 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     signIn: '/login',
   },
   callbacks: {
-    async jwt({ token, user }) {
-      if (user) {
-        token.id = user.id;
-        token.email = user.email;
-        token.name = user.name;
-        token.accessToken = (user as any).accessToken;
+    async jwt({ token, user, account }) {
+      if (user && account) {
+        if (account.provider === 'google') {
+          console.log('Google user data:', { email: user.email, googleId: user.id, name: user.name }); // Debug
+          const client = createApolloClient();
+          try {
+            const { data, errors } = await client.mutate({
+              mutation: GOOGLE_LOGIN_MUTATION,
+              variables: {
+                email: user.email || '',
+                googleId: user.id || '',
+                name: user.name || '',
+              },
+            });
 
+            if (errors) {
+              console.error('GraphQL errors:', errors);
+              throw new Error(`Google login failed: ${errors[0]?.message || 'Unknown error'}`);
+            }
+
+            const loginData = data?.ggLogin;
+
+            if (!loginData?.user || !loginData.accessToken) {
+              throw new Error('Không thể xác thực user Google');
+            }
+
+            token.id = loginData.user.id;
+            token.email = loginData.user.email;
+            token.name = loginData.user.userName; // Đồng bộ với userName
+            token.accessToken = loginData.accessToken;
+          } catch (error) {
+            console.error('Google auth error:', error);
+            throw new Error(`Đăng nhập Google thất bại: ${error || 'Unknown error'}`);
+          }
+        } else if (account.provider === 'credentials') {
+          token.id = user.id;
+          token.email = user.email;
+          token.name = user.name;
+          token.accessToken = (user as any).accessToken;
+        }
       }
       return token;
     },
@@ -81,9 +116,18 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       }
       return session;
     },
+    async redirect({ url, baseUrl }) {
+      if (url.includes('/login')) {
+        return baseUrl;
+      }
+      if (url.startsWith('/')) {
+        return `${baseUrl}${url}`;
+      }
+      return baseUrl;
+    },
   },
   logger: {
-    error(error) { // Chỉ nhận một đối số là Error
+    error(error) {
       if (error.name !== 'CredentialsSignin') {
         console.error('[AUTH_ERROR]', error.message);
       }
