@@ -4,6 +4,7 @@ import useAuth from '@/app/hooks/useAuth';
 
 const ProtectedRoute = ({ children }: { children: ReactNode }) => {
   const { session, status } = useAuth();
+
   if (status === 'loading') {
     return <div></div>;
   }

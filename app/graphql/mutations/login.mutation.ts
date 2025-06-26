@@ -9,6 +9,7 @@ export const LOGIN_MUTATION = gql`
                 email
             }
             accessToken
+            refreshToken
         }
     }
 `;
@@ -22,6 +23,7 @@ export const GOOGLE_LOGIN_MUTATION = gql`
                 email
             }
             accessToken
+            refreshToken
         }
     }
 `;
