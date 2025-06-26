@@ -24,6 +24,8 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
 
           const loginData = data?.login;
 
+          console.log('Login data:', loginData); // Debug log
+
           if (!loginData?.user || !loginData.accessToken) {
             throw new CustomCredentialsError('Invalid credentials', 'invalid_credentials');
           }
@@ -33,6 +35,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
             email: loginData.user.email,
             name: loginData.user.username,
             accessToken: loginData.accessToken,
+            refreshToken: loginData.refreshToken,
           };
         } catch (error) {
           if (error instanceof ApolloError) {
@@ -85,6 +88,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
 
             const loginData = data?.ggLogin;
 
+
             if (!loginData?.user || !loginData.accessToken) {
               throw new Error('Không thể xác thực user Google');
             }
@@ -93,6 +97,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
             token.email = loginData.user.email;
             token.name = loginData.user.userName; // Đồng bộ với userName
             token.accessToken = loginData.accessToken;
+            token.refreshToken = loginData.refreshToken; // Lưu refresh token nếu cần
           } catch (error) {
             console.error('Google auth error:', error);
             throw new Error(`Đăng nhập Google thất bại: ${error || 'Unknown error'}`);
@@ -102,6 +107,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           token.email = user.email;
           token.name = user.name;
           token.accessToken = (user as any).accessToken;
+          token.refreshToken = (user as any).refreshToken; // Lưu refresh token nếu cần
         }
       }
       return token;

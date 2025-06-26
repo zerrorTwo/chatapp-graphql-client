@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation';
 const useAuthenticated = () => {
   const router = useRouter();
   const { data: session, status } = useSession();
-  console.log('session => ', session);
 
   useEffect(() => {
     if (status === 'loading') return;
