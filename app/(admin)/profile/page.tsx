@@ -1,7 +1,7 @@
-import Profile from '@/app/(admin)/profile/profile';
+import Profile from "@/app/(admin)/profile/profile";
 
-const ProfilePage = () =>  {
-  <Profile />
-}
+const ProfilePage = () => {
+  return <Profile />;
+};
 
-export default ProfilePage ;
+export default ProfilePage;

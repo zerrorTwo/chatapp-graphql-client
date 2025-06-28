@@ -48,7 +48,7 @@
   --card-foreground: oklch(0.145 0 0);
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.696 0.169 41.428);
+  --primary: #0084ff;
   --primary-foreground: oklch(0.985 0 0);
   --secondary: oklch(0.97 0 0);
   --secondary-foreground: oklch(0.205 0 0);
@@ -73,6 +73,12 @@
   --sidebar-accent-foreground: oklch(0.205 0 0);
   --sidebar-border: oklch(0.922 0 0);
   --sidebar-ring: oklch(0.708 0 0);
+}
+
+.tooltip {
+  @apply px-2 py-1 text-sm rounded bg-primary text-primary-foreground shadow-md;
+  z-index: 50;
+  white-space: nowrap;
 }
 
 .dark {
@@ -107,6 +113,22 @@
   --sidebar-accent-foreground: oklch(0.985 0 0);
   --sidebar-border: oklch(1 0 0 / 10%);
   --sidebar-ring: oklch(0.556 0 0);
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+  width: 8px;
+  background: #f1f1f1;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #b3b3b3;
+  border-radius: 8px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #888;
+}
+.custom-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: #b3b3b3 #f1f1f1;
 }
 
 @layer base {
