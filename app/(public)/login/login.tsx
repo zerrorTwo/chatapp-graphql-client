@@ -9,8 +9,8 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { signIn } from 'next-auth/react';
 import { useLoading } from '@/app/context/loadingContext';
+import { performLogin } from '@/app/graphql/apollo-client'; // Import the performLogin function
 
 const formSchema = z.object({
   email: z.string().email({ message: 'Invalid email address' }),
@@ -34,49 +34,19 @@ export default function LoginPreview() {
     try {
       setLoading(true);
       const { email, password } = values;
-      const res = await signIn('credentials', {
-        email,
-        password,
-        callbackUrl: '/',
-        redirect: false,
-      });
+      const data = await performLogin(email, password); // Use Apollo Client's performLogin
+      console.log(data);
+      
 
-      if (res?.error) {
-        setLoading(false);
-        if (res.error === 'CredentialsSignin') {
-          toast.error('Invalid email or password!');
-          return { error: 'Invalid email or password!' };
-        } else {
-          toast.error(`Login failed: ${res.error}`);
-          return { error: res.error || 'Something went wrong during login!' };
-        }
-      }
       setLoading(false);
       toast.success('Login successful!');
-      window.location.href = '/';
+      window.location.href = '/'; // Redirect to homepage
       return { success: true };
-    } catch (error) {
+    } catch (error: any) {
+      setLoading(false);
       console.error('Unexpected error during form submission:', error);
-      toast.error('Failed to submit the form. Please try again.');
-      return { error: 'Failed to submit the form. Please try again.' };
-    }
-  }
-
-  async function handleGoogleSignIn() {
-    try {
-      const res = await signIn('google', { callbackUrl: '/', redirect: false });
-      console.log('Google signIn response:', res);
-      if (res?.error) {
-        toast.error('Google login failed!');
-        return { error: 'Google login failed!' };
-      }
-      toast.success('Google login successful!');
-      window.location.href = res.url || '/';
-      return { success: true };
-    } catch (error) {
-      console.error('Unexpected error during Google login:', error);
-      toast.error('Google login failed. Please try again.');
-      return { error: 'Google login failed. Please try again.' };
+      toast.error(error.message || 'Failed to login. Please try again.');
+      return { error: error.message || 'Failed to login. Please try again.' };
     }
   }
 
@@ -144,19 +114,6 @@ export default function LoginPreview() {
                   className="w-full cursor-pointer bg-orange-500 hover:bg-orange-600 text-white transition-colors duration-200"
                 >
                   Login
-                </Button>
-                <Button
-                  type="button"
-                  onClick={handleGoogleSignIn}
-                  variant="outline"
-                  className="w-full flex items-center gap-2 cursor-pointer"
-                >
-                  <img
-                    src="/images/google.png"
-                    alt="Google icon"
-                    className="w-5 h-5 object-contain"
-                  />
-                  <span className="text-sm font-medium">Login with Google</span>
                 </Button>
               </div>
             </form>

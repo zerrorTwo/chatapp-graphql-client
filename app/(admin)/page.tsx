@@ -2,8 +2,6 @@
 
 import { useMutation, useQuery } from '@apollo/client';
 import { GET_USER_BY_ID } from '@/app/graphql/queries/user/getById.query';
-import { SET_REFRESH_TOKEN_MUTATION } from '@/app/graphql/mutations/setRefreshToken.mutation';
-import { useEffect } from 'react';
 
 const HomePage = () => {
   const { data, loading, error } = useQuery(GET_USER_BY_ID, {
@@ -11,19 +9,6 @@ const HomePage = () => {
       id: 5,
     },
   });
-  const [setRefreshToken, { data: hihi }] = useMutation(SET_REFRESH_TOKEN_MUTATION);
-
-  useEffect(() => {
-    // Gọi mutation khi component mount
-    setRefreshToken();
-  }, []);
-
-  useEffect(() => {
-    console.log('Mutation result:', hihi);  // Sau khi gọi xong sẽ có dữ liệu
-  }, [hihi]);
-
-
-  console.log(data);
 
   if (loading) return <p>Loading...</p>;
   if (error) return <p>Error: {error.message}</p>;
