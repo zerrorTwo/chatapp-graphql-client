@@ -14,15 +14,14 @@ export const LOGIN_MUTATION = gql`
 `;
 
 export const GOOGLE_LOGIN_MUTATION = gql`
-  mutation GGLogin($email: String!, $googleId: String!, $name: String!) {
-    ggLogin(ggLoginInput: { email: $email, googleId: $googleId, name: $name }) {
+  mutation LoginWithGoogle($input: String!) {
+    loginWithGoogleIdToken(input: $input) {
+      accessToken
       user {
         id
         userName
         email
       }
-      accessToken
-      refreshToken
     }
   }
 `;

@@ -162,8 +162,6 @@ export async function performLogin(email: string, password: string) {
       variables: { email, password },
     });
 
-    console.log("[LOGIN DATA]:", data);
-
     if (!data?.login?.accessToken) {
       throw new Error("Không nhận được accessToken");
     }
