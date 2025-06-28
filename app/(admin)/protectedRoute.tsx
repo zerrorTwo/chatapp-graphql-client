@@ -3,12 +3,12 @@ import { ReactNode } from 'react';
 import useAuth from '@/app/hooks/useAuth';
 
 const ProtectedRoute = ({ children }: { children: ReactNode }) => {
-  const { session, status } = useAuth();
+  const {isAuthenticated, status } = useAuth();
 
   if (status === 'loading') {
     return <div></div>;
   }
-  if (!session) {
+  if (!isAuthenticated) {
     return null;
   }
   return (

@@ -1,20 +1,31 @@
-import { useSession } from 'next-auth/react';
-import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+"use client";
+
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+
+const TOKEN_KEY = "access_token";
 
 const useAuth = () => {
   const router = useRouter();
-  const { data: session, status } = useSession();
+
+  const [status, setStatus] = useState<
+    "loading" | "authenticated" | "unauthenticated"
+  >("loading");
 
   useEffect(() => {
-    if (status === 'loading') return;
-
-    if (!session) {
-      router.push('/login');
+    const token = localStorage.getItem(TOKEN_KEY);
+    if (token) {
+      setStatus("authenticated");
+    } else {
+      setStatus("unauthenticated");
+      router.push("/login"); // 👈 chuyển hướng nếu chưa login
     }
-  }, [status, session]);
+  }, [router]);
 
-  return { session, status };
+  return {
+    status,
+    isAuthenticated: status === "authenticated",
+  };
 };
 
 export default useAuth;

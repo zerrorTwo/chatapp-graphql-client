@@ -1,19 +1,20 @@
-'use client';
-import { ReactNode } from 'react';
-import useAuthenticated from '@/app/hooks/useAuthenticated';
+"use client";
+
+import { ReactNode } from "react";
+import useAuthenticated from "@/app/hooks/useAuthenticated";
 
 const PublicRoute = ({ children }: { children: ReactNode }) => {
-  const { session, status } = useAuthenticated();
-  if (status === 'loading') {
-    return <div></div>;
+  const { status, isAuthenticated } = useAuthenticated();
+
+  if (status === "loading") {
+    return <div>Loading...</div>; // Có thể thay bằng spinner
   }
-  if (session) {
-    return null;
+
+  if (isAuthenticated) {
+    return null; // Nếu đã login rồi thì không cho vào trang public
   }
-  return (
-    <div>
-      {children}
-    </div>
-  );
+
+  return <>{children}</>;
 };
+
 export default PublicRoute;
