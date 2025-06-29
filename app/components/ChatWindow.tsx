@@ -168,7 +168,7 @@ const ChatWindow = () => {
           style={getBackgroundStyle()}
         >
           {chat.messages.map((msg) => {
-            const isOwn = msg.sender === currentUser.id;
+            const isOwn = msg.sender === currentUser?.id;
             const isSystem = msg.sender === "system";
 
             if (isSystem) {

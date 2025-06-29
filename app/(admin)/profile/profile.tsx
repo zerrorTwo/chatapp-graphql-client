@@ -1,27 +1,95 @@
 "use client";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { ArrowLeft, Camera, Edit3, Save, X } from "lucide-react";
 import { useChat } from "@/app/context/ChatContext";
 import Link from "next/link";
+import { useMutation } from "@apollo/client";
+import {
+  UPLOAD_AVATAR,
+  UPDATE_USER,
+} from "@/app/graphql/mutations/users/update.mutation";
+import { toast } from "sonner";
+import { useLoading } from "@/app/context/loadingContext";
 
 const Profile = () => {
   const { currentUser } = useChat();
+  const [uploadAvatar] = useMutation(UPLOAD_AVATAR);
+  const [updateUser] = useMutation(UPDATE_USER);
+
   const [isEditing, setIsEditing] = useState(false);
-  const [name, setName] = useState(currentUser.name);
-  const [email, setEmail] = useState(currentUser.email);
+  const [name, setName] = useState<string>("");
+  const [email, setEmail] = useState<string>("");
+  const [avatarUrl, setAvatarUrl] = useState<string>();
+  const [avatarPreview, setAvatarPreview] = useState<string>();
   const [bio, setBio] = useState("Xin chào! Tôi đang sử dụng Messenger.");
-  const [status, setStatus] = useState(currentUser.status);
+  const [status, setStatus] = useState<boolean | null>(null);
+  const { setLoading } = useLoading();
 
-  const statusOptions = [
-    { value: "online", label: "Trực tuyến", color: "bg-green-500" },
-    { value: "away", label: "Vắng mặt", color: "bg-yellow-500" },
-    { value: "busy", label: "Bận", color: "bg-red-500" },
-    { value: "offline", label: "Ngoại tuyến", color: "bg-gray-500" },
-  ];
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
 
-  const handleSave = () => {
-    console.log("Saving:", { name, email, bio, status });
-    setIsEditing(false);
+  const handleAvatarClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      // Preview ảnh
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setAvatarPreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+      setSelectedFile(file); // Lưu file, không upload ngay
+    }
+  };
+
+  useEffect(() => {
+    if (currentUser) {
+      setName(currentUser.name);
+      setEmail(currentUser.email);
+      setAvatarUrl(currentUser.avatarUrl);
+      setStatus(
+        typeof currentUser.status === "boolean" ? currentUser.status : null
+      );
+    }
+  }, [currentUser]);
+
+  const handleSave = async () => {
+    let newAvatarUrl = avatarUrl;
+    if (selectedFile && selectedFile instanceof File) {
+      try {
+        const uploadRes = await uploadAvatar({
+          variables: { file: selectedFile },
+        });
+        console.log("uplaodadada", uploadRes);
+        newAvatarUrl = uploadRes.data?.uploadAvatar;
+      } catch (err) {
+        toast.error("Upload failed!");
+        return;
+      }
+    }
+    try {
+      setLoading(true);
+      await updateUser({
+        variables: {
+          dataUpdate: {
+            userName: name,
+            status, // boolean value
+            avatarUrl: newAvatarUrl,
+          },
+        },
+      });
+      setLoading(false);
+      setAvatarUrl(newAvatarUrl);
+      setIsEditing(false);
+      setSelectedFile(null); // Reset file sau khi upload thành công
+      toast.success("Update successfully!!");
+    } catch (err) {
+      setLoading(false);
+      toast.error("Update failed!!");
+    }
   };
 
   return (
@@ -65,22 +133,46 @@ const Profile = () => {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8 w-full">
           {/* Avatar + Statistics */}
           <div className="col-span-1 flex flex-col items-center space-y-8">
-            {/* Avatar */}
             <div className="p-8 bg-white rounded-2xl shadow flex flex-col items-center w-full">
               <div className="relative group">
-                <div className="w-36 h-36 rounded-full border-4 border-blue-400 bg-gradient-to-br from-blue-400 to-blue-200 text-white text-5xl font-extrabold flex items-center justify-center shadow-lg">
-                  {name.charAt(0)}
+                {/* Avatar Preview hoặc Chữ cái đầu */}
+                <div className="w-36 h-36 rounded-full border-4 border-blue-400 bg-gradient-to-br from-blue-400 to-blue-200 text-white text-5xl font-extrabold flex items-center justify-center shadow-lg overflow-hidden">
+                  {avatarPreview || avatarUrl ? (
+                    <img
+                      src={avatarPreview || avatarUrl!}
+                      alt="Avatar"
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    name?.charAt(0)
+                  )}
                 </div>
+
+                {/* Button giữ nguyên, có chọn ảnh */}
                 {isEditing && (
-                  <button className="absolute bottom-2 right-2 p-2 rounded-full bg-white border border-blue-300 shadow hover:bg-blue-50 transition">
-                    <Camera className="w-5 h-5 text-blue-600" />
-                  </button>
+                  <>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      ref={fileInputRef}
+                      className="hidden"
+                      onChange={handleAvatarChange}
+                    />
+                    <button
+                      type="button"
+                      onClick={handleAvatarClick}
+                      className="absolute bottom-2 right-2 p-2 rounded-full bg-white border border-blue-300 shadow hover:bg-blue-50 transition"
+                    >
+                      <Camera className="w-5 h-5 text-blue-600" />
+                    </button>
+                  </>
                 )}
               </div>
+
               <h2 className="text-2xl font-bold mt-4 text-blue-700">{name}</h2>
               <p className="text-gray-500">{email}</p>
             </div>
-            {/* Statistics */}
+
             <div className="grid grid-cols-2 gap-4 w-full">
               <div className="p-6 bg-white rounded-2xl shadow flex flex-col items-center">
                 <div className="text-3xl font-extrabold text-blue-600 mb-1">
@@ -107,7 +199,7 @@ const Profile = () => {
               Thông tin cá nhân
             </h3>
 
-            {/* Tên */}
+            {/* Name */}
             <div>
               <label className="text-sm font-semibold mb-2 text-gray-700 block">
                 Tên hiển thị
@@ -132,9 +224,10 @@ const Profile = () => {
               </label>
               {isEditing ? (
                 <input
+                  disabled
                   className="w-full px-4 py-2 border-2 rounded-lg bg-white border-blue-200 text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-400 transition"
                   value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  readOnly
                 />
               ) : (
                 <p className="bg-blue-50 p-3 rounded-lg text-gray-800 font-medium">
@@ -170,27 +263,33 @@ const Profile = () => {
               {isEditing ? (
                 <select
                   className="w-full px-4 py-2 border-2 rounded-lg bg-white border-blue-200 text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-400 transition"
-                  value={status}
-                  onChange={(e) =>
-                    setStatus(e.target.value as "online" | "offline" | "away")
+                  value={
+                    status === true ? "true" : status === false ? "false" : ""
                   }
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    if (value === "true") setStatus(true);
+                    else if (value === "false") setStatus(false);
+                    else setStatus(null);
+                  }}
                 >
-                  {statusOptions.map((opt) => (
-                    <option key={opt.value} value={opt.value}>
-                      {opt.label}
-                    </option>
-                  ))}
+                  <option value="">-- Chọn trạng thái --</option>
+                  <option value="true">Trực tuyến</option>
+                  <option value="false">Ngoại tuyến</option>
                 </select>
               ) : (
                 <div className="flex items-center p-3 rounded-lg bg-blue-50">
                   <div
                     className={`w-3 h-3 rounded-full mr-3 ${
-                      statusOptions.find((o) => o.value === status)?.color
+                      status === true ? "bg-green-500" : "bg-gray-500"
                     }`}
                   />
                   <span className="text-gray-800 font-medium">
-                    {statusOptions.find((o) => o.value === status)?.label ||
-                      "Không xác định"}
+                    {status === true
+                      ? "Trực tuyến"
+                      : status === false
+                      ? "Ngoại tuyến"
+                      : "Không xác định"}
                   </span>
                 </div>
               )}
