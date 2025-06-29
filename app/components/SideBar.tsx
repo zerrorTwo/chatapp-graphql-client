@@ -27,7 +27,7 @@ const Sidebar = () => {
       return <Users className="w-8 h-8" />;
     }
     const otherUser = users.find(
-      (u) => u.id !== currentUser.id && chat.participants.includes(u.id)
+      (u) => u.id !== currentUser?.id && chat.participants.includes(u.id)
     );
     return (
       <div className="bg-primary w-10 h-10 rounded-full flex items-center justify-center text-white font-bold">

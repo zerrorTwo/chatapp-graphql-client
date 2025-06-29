@@ -1,6 +1,8 @@
 "use client";
 
-import React, { createContext, useContext, useState } from "react";
+import { useQuery } from "@apollo/client";
+import React, { createContext, useContext, useEffect, useState } from "react";
+import { GET_USER_BY_ID } from "../graphql/queries/user/getById.query";
 
 interface Message {
   id: string;
@@ -26,7 +28,7 @@ interface User {
   id: string;
   name: string;
   email: string;
-  avatar?: string;
+  avatarUrl?: string;
   status: "online" | "offline" | "away";
 }
 
@@ -34,7 +36,7 @@ interface ChatContextType {
   chats: Chat[];
   users: User[];
   activeChat: string | null;
-  currentUser: User;
+  currentUser: User | null;
   setActiveChat: (chatId: string | null) => void;
   sendMessage: (
     chatId: string,
@@ -60,15 +62,23 @@ export const useChat = () => {
 };
 
 export const ChatProvider = ({ children }: { children: React.ReactNode }) => {
-  const [currentUser] = useState<User>({
-    id: "user1",
-    name: "Bạn",
-    email: "you@example.com",
-    status: "online",
-  });
+  const { data, loading, error } = useQuery(GET_USER_BY_ID);
+
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
+
+  useEffect(() => {
+    if (data?.getUserById) {
+      setCurrentUser({
+        id: data.getUserById.id,
+        name: data.getUserById.userName,
+        email: data.getUserById.email,
+        status: data.getUserById.status,
+        avatarUrl: data.getUserById.avatarUrl,
+      });
+    }
+  }, [data]);
 
   const [users, setUsers] = useState<User[]>([
-    currentUser,
     {
       id: "user2",
       name: "Nguyễn Văn A",
@@ -119,6 +129,13 @@ export const ChatProvider = ({ children }: { children: React.ReactNode }) => {
       status: "offline",
     },
   ]);
+
+  // Thêm currentUser vào users khi currentUser thay đổi
+  useEffect(() => {
+    if (currentUser && !users.some((u) => u.id === currentUser.id)) {
+      setUsers((prev) => [currentUser, ...prev]);
+    }
+  }, [currentUser]);
 
   const [chats, setChats] = useState<Chat[]>([
     {
@@ -176,6 +193,7 @@ export const ChatProvider = ({ children }: { children: React.ReactNode }) => {
     type = "text",
     data?: any
   ) => {
+    if (!currentUser) return;
     const newMessage: Message = {
       id: Date.now().toString(),
       content,
@@ -184,7 +202,6 @@ export const ChatProvider = ({ children }: { children: React.ReactNode }) => {
       type: type as any,
       data,
     };
-
     setChats((prev) =>
       prev.map((chat) =>
         chat.id === chatId
@@ -195,6 +212,7 @@ export const ChatProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   const createGroup = (name: string, participants: string[]) => {
+    if (!currentUser) return;
     const newChat: Chat = {
       id: Date.now().toString(),
       name,

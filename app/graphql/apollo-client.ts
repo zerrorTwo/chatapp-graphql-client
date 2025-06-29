@@ -6,6 +6,8 @@ import {
   InMemoryCache,
   Observable,
 } from "@apollo/client";
+// @ts-ignore
+import { createUploadLink } from "apollo-upload-client";
 import { onError } from "@apollo/client/link/error";
 import { setContext } from "@apollo/client/link/context";
 import { LOGIN_MUTATION } from "./mutations/login.mutation";
@@ -124,9 +126,12 @@ const createErrorLink = (client: ApolloClient<unknown>) =>
     }
   });
 
-const httpLink = new HttpLink({
+const httpLink = new createUploadLink({
   uri: process.env.NEXT_PUBLIC_BE_URL,
   credentials: "include",
+  headers: {
+    "apollo-require-preflight": "true",
+  },
 });
 
 const createApolloClient = () => {
