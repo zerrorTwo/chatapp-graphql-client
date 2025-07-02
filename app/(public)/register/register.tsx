@@ -1,10 +1,10 @@
-'use client'
+"use client";
 
-import Link from 'next/link'
-import { z } from 'zod'
-import { zodResolver } from '@hookform/resolvers/zod'
-import { useForm } from 'react-hook-form'
-import { toast } from 'sonner'
+import Link from "next/link";
+import { z } from "zod";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useForm } from "react-hook-form";
+import { toast } from "sonner";
 
 import {
   Form,
@@ -13,59 +13,75 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
-} from '@/components/ui/form'
-import { Button } from '@/components/ui/button'
+} from "@/components/ui/form";
+import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from '@/components/ui/card'
-import { Input } from '@/components/ui/input'
+} from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { useLoading } from "@/app/context/loadingContext";
+import { useMutation } from "@apollo/client";
+import { REGISTER_MUTATION } from "@/app/graphql/mutations/register.mutation";
 
 // Define validation schema using Zod
 const formSchema = z
   .object({
     name: z
       .string()
-      .min(2, { message: 'Name must be at least 2 characters long' }),
-    email: z.string().email({ message: 'Invalid email address' }),
+      .min(2, { message: "Name must be at least 2 characters long" }),
+    email: z.string().email({ message: "Invalid email address" }),
     password: z
       .string()
-      .min(6, { message: 'Password must be at least 6 characters long' })
-      .regex(/[a-zA-Z0-9]/, { message: 'Password must be alphanumeric' }),
+      .min(6, { message: "Password must be at least 6 characters long" })
+      .regex(/[a-zA-Z0-9]/, { message: "Password must be alphanumeric" }),
     confirmPassword: z.string(),
   })
   .refine((data) => data.password === data.confirmPassword, {
-    path: ['confirmPassword'],
-    message: 'Passwords do not match',
-  })
+    path: ["confirmPassword"],
+    message: "Passwords do not match",
+  });
 
 export default function RegisterPreview() {
+  const { setLoading } = useLoading();
+  const [registerMutation] = useMutation(REGISTER_MUTATION);
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      name: '',
-      email: '',
-      password: '',
-      confirmPassword: '',
+      name: "",
+      email: "",
+      password: "",
+      confirmPassword: "",
     },
-  })
+  });
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     try {
-      console.log(123);
-      // Assuming an async registration function
-      console.log(values)
-      toast(
-        <pre className="mt-2 w-[340px] rounded-md bg-slate-950 p-4">
-          <code className="text-white">{JSON.stringify(values, null, 2)}</code>
-        </pre>,
-      )
-    } catch (error) {
-      console.error('Form submission error', error)
-      toast.error('Failed to submit the form. Please try again.')
+      setLoading(true);
+      const { data } = await registerMutation({
+        variables: {
+          userName: values.name,
+          email: values.email,
+          password: values.password,
+          confirmPassword: values.confirmPassword,
+        },
+      });
+      setLoading(false);
+      if (data?.register?.user) {
+        toast.success("Đăng ký thành công! Hãy kiểm tra email hoặc đăng nhập.");
+        form.reset();
+      } else {
+        toast.error("Đăng ký thất bại. Vui lòng thử lại.");
+      }
+    } catch (error: any) {
+      setLoading(false);
+      console.error("Form submission error", error);
+      toast.error(
+        error?.message || "Failed to submit the form. Please try again."
+      );
     }
   }
 
@@ -127,7 +143,7 @@ export default function RegisterPreview() {
                       <FormLabel htmlFor="password">Password</FormLabel>
                       <FormControl>
                         <Input
-                          type={'password'}
+                          type={"password"}
                           id="password"
                           placeholder="******"
                           autoComplete="new-password"
@@ -162,15 +178,17 @@ export default function RegisterPreview() {
                   )}
                 />
 
-                <Button type="submit"
-                        className="w-full cursor-pointer bg-orange-500 hover:bg-orange-600 text-white transition-colors duration-200">
+                <Button
+                  type="submit"
+                  className="w-full cursor-pointer bg-orange-500 hover:bg-orange-600 text-white transition-colors duration-200"
+                >
                   Register
                 </Button>
               </div>
             </form>
           </Form>
           <div className="mt-4 text-center text-sm">
-            Already have an account?{' '}
+            Already have an account?{" "}
             <Link href="/login" className="underline">
               Login
             </Link>
@@ -178,5 +196,5 @@ export default function RegisterPreview() {
         </CardContent>
       </Card>
     </div>
-  )
+  );
 }
